@@ -2,6 +2,10 @@ import json
 import RPi.GPIO as GPIO
 from time import sleep
 from losantmqtt import Device #Import Losant library: https://github.com/Losant/losant-mqtt-python
+import binascii
+import sys
+
+from Adafruit_PN532 as PN532
 
 #PIN = 17;
 
