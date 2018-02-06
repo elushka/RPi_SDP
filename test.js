@@ -2,7 +2,7 @@ var util = require('util');
 
 var bleno = require('./index');
 
-var Gpio = require('../onoff').Gpio;
+var gpio = require('../onoff').Gpio;
 
 var BlenoPrimaryService = bleno.PrimaryService;
 var BlenoCharacteristic = bleno.Characteristic;
@@ -86,8 +86,9 @@ util.inherits(WriteOnlyCharacteristic, BlenoCharacteristic);
 
 //Function to turn on GPIO pins for the locks
 var GPIOcontrol = function (pin) {
-  var LOCK = new Gpio(pin, 'out');
-  console.log("Selected pin number: %d",pin);
+  console.log("Started GPIO control function execution...");
+  console.log("Selected pin number: " + pin);
+  var LOCK = new gpio(pin, 'out');
   var delay = setInterval(activateLock, 5000);
 
   function activateLock() {
@@ -107,13 +108,15 @@ var GPIOcontrol = function (pin) {
 
 
 WriteOnlyCharacteristic.prototype.onWriteRequest = function(data, offset, withoutResponse, callback) {
-  console.log('WriteOnlyCharacteristic write request: ' + data.toString('hex') + ' ' + offset + ' ' + withoutResponse);
+  console.log('WriteOnlyCharacteristic write request in hex: ' + data.toString('hex') + ' ' + offset + ' ' + withoutResponse);
+  console.log('WriteOnlyCharacteristic write request in decimal: ' + data.toString('utf8') + ' ' + offset + ' ' + withoutResponse);
   //Convert data from binary to integer
-	console.log(data);
-  var pin = parseInt(data, 2);
+	console.log(data.toString('utf8'));
+  var pin = data.toString('utf8')
+  console.log('This is the sent pin: ' + pin);
   //Execute pin control function
   GPIOcontrol(pin);
-
+  console.log("Gpio control function finished executing.");
 	callback(this.RESULT_SUCCESS);
 };
 
