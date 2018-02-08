@@ -2,4 +2,4 @@
 
 npm install bleno 
 <br>
-npm install rpi-gpio
+npm install onoff
