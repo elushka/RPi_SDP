@@ -12,7 +12,7 @@ console.log('bleno');
 
 var StaticReadOnlyCharacteristic = function() {
   StaticReadOnlyCharacteristic.super_.call(this, {
-    uuid: 'fffffffffffffffffffffffffffffff1',
+    uuid: 'ccc1',
     properties: ['read'],
     value: new Buffer('value'),
     descriptors: [
@@ -27,7 +27,7 @@ util.inherits(StaticReadOnlyCharacteristic, BlenoCharacteristic);
 
 var DynamicReadOnlyCharacteristic = function() {
   DynamicReadOnlyCharacteristic.super_.call(this, {
-    uuid: 'fffffffffffffffffffffffffffffff2',
+    uuid: 'ccc6',
     properties: ['read']
   });
 };
@@ -50,7 +50,7 @@ DynamicReadOnlyCharacteristic.prototype.onReadRequest = function(offset, callbac
 
 var LongDynamicReadOnlyCharacteristic = function() {
   LongDynamicReadOnlyCharacteristic.super_.call(this, {
-    uuid: 'fffffffffffffffffffffffffffffff3',
+    uuid: 'ccc7',
     properties: ['read']
   });
 };
@@ -77,7 +77,7 @@ LongDynamicReadOnlyCharacteristic.prototype.onReadRequest = function(offset, cal
 
 var WriteOnlyCharacteristic = function() {
   WriteOnlyCharacteristic.super_.call(this, {
-    uuid: 'fffffffffffffffffffffffffffffff4',
+    uuid: 'ccc2',
     properties: ['write', 'writeWithoutResponse']
   });
 };
@@ -109,20 +109,18 @@ var GPIOcontrol = function (pin) {
 
 WriteOnlyCharacteristic.prototype.onWriteRequest = function(data, offset, withoutResponse, callback) {
   console.log('WriteOnlyCharacteristic write request in hex: ' + data.toString('hex') + ' ' + offset + ' ' + withoutResponse);
-  console.log('WriteOnlyCharacteristic write request in decimal: ' + data.toString('utf8') + ' ' + offset + ' ' + withoutResponse);
-  //Convert data from binary to integer
-	console.log(data.toString('utf8'));
-  var pin = data.toString('utf8')
+  //Convert data from hex to integer
+  var pin = parseInt('0x'+data.toString('hex'));
   console.log('This is the sent pin: ' + pin);
   //Execute pin control function
   GPIOcontrol(pin);
   console.log("Gpio control function finished executing.");
-	callback(this.RESULT_SUCCESS);
+  callback(this.RESULT_SUCCESS);
 };
 
 var NotifyOnlyCharacteristic = function() {
   NotifyOnlyCharacteristic.super_.call(this, {
-    uuid: 'fffffffffffffffffffffffffffffff5',
+    uuid: 'ccc8',
     properties: ['notify']
   });
 };
@@ -158,7 +156,7 @@ NotifyOnlyCharacteristic.prototype.onNotify = function() {
 
 var IndicateOnlyCharacteristic = function() {
   IndicateOnlyCharacteristic.super_.call(this, {
-    uuid: 'fffffffffffffffffffffffffffffff6',
+    uuid: 'ccc3',
     properties: ['indicate']
   });
 };
@@ -194,7 +192,7 @@ IndicateOnlyCharacteristic.prototype.onIndicate = function() {
 
 function SampleService() {
   SampleService.super_.call(this, {
-    uuid: 'fffffffffffffffffffffffffffffff0',
+    uuid: 'ccc0',
     characteristics: [
       new StaticReadOnlyCharacteristic(),
       new DynamicReadOnlyCharacteristic(),
@@ -212,7 +210,7 @@ bleno.on('stateChange', function(state) {
   console.log('on -> stateChange: ' + state + ', address = ' + bleno.address);
 
   if (state === 'poweredOn') {
-    bleno.startAdvertising('test', ['fffffffffffffffffffffffffffffff0']);
+    bleno.startAdvertising('test', ['ccc0']);
   } else {
     bleno.stopAdvertising();
   }
