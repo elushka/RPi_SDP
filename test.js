@@ -77,7 +77,7 @@ LongDynamicReadOnlyCharacteristic.prototype.onReadRequest = function(offset, cal
 
 var WriteOnlyCharacteristic = function() {
   WriteOnlyCharacteristic.super_.call(this, {
-    uuid: 'ccc2',
+    uuid: 'FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFF4',
     properties: ['write', 'writeWithoutResponse']
   });
 };
@@ -115,7 +115,7 @@ WriteOnlyCharacteristic.prototype.onWriteRequest = function(data, offset, withou
   //Execute pin control function
   GPIOcontrol(pin);
   console.log("Gpio control function finished executing.");
-  callback(this.RESULT_SUCCESS);
+	callback(this.RESULT_SUCCESS);
 };
 
 var NotifyOnlyCharacteristic = function() {
@@ -192,7 +192,7 @@ IndicateOnlyCharacteristic.prototype.onIndicate = function() {
 
 function SampleService() {
   SampleService.super_.call(this, {
-    uuid: 'ccc0',
+    uuid: 'FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFF0',
     characteristics: [
       new StaticReadOnlyCharacteristic(),
       new DynamicReadOnlyCharacteristic(),
@@ -210,7 +210,7 @@ bleno.on('stateChange', function(state) {
   console.log('on -> stateChange: ' + state + ', address = ' + bleno.address);
 
   if (state === 'poweredOn') {
-    bleno.startAdvertising('test', ['ccc0']);
+    bleno.startAdvertising('Smartmory', ['FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFF0']);
   } else {
     bleno.stopAdvertising();
   }
