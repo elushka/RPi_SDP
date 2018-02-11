@@ -4,21 +4,26 @@ var bleno = require('./index');
 
 var gpio = require('../onoff').Gpio;
 
+const { exec } = require('child_process');
+
 var BlenoPrimaryService = bleno.PrimaryService;
 var BlenoCharacteristic = bleno.Characteristic;
 var BlenoDescriptor = bleno.Descriptor;
+var nfcResponse;
+
+var nfcValues = [ "04  66  c8  b2  a6  4a  81", "c4  e4  53  12"];
 
 console.log('bleno');
 
 var StaticReadOnlyCharacteristic = function() {
   StaticReadOnlyCharacteristic.super_.call(this, {
-    uuid: 'ccc1',
+    uuid: 'FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFF2',
     properties: ['read'],
     value: new Buffer('value'),
     descriptors: [
       new BlenoDescriptor({
         uuid: '2901',
-        value: 'user description'
+        value: 'This is what i wrote'
       })
     ]
   });
@@ -27,30 +32,55 @@ util.inherits(StaticReadOnlyCharacteristic, BlenoCharacteristic);
 
 var DynamicReadOnlyCharacteristic = function() {
   DynamicReadOnlyCharacteristic.super_.call(this, {
-    uuid: 'ccc6',
+    uuid: 'FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFF3',
     properties: ['read']
   });
 };
 
 util.inherits(DynamicReadOnlyCharacteristic, BlenoCharacteristic);
 
+
 DynamicReadOnlyCharacteristic.prototype.onReadRequest = function(offset, callback) {
-  var result = this.RESULT_SUCCESS;
-  var data = new Buffer('dynamic value');
+  console.log("About to exec...");
+  exec("nfc-poll | grep UID | sed 's/^.*: //'", (err, stdout, stderr) => {
+    if (err) {
+      // node couldn't execute the command
+      return;
+    }
+    while(stdout == null) {
 
-  if (offset > data.length) {
-    result = this.RESULT_INVALID_OFFSET;
-    data = null;
-  } else {
-    data = data.slice(offset);
-  }
+    }
 
-  callback(result, data);
+    nfcResponse = stdout.trimRight();
+
+    var nfcStatus = (nfcValues.indexOf(nfcResponse) > -1);
+
+    if(nfcStatus == true) {
+      nfcResponse = "1";
+    }
+    else {
+      nfcResponse = "0";
+    }
+    // the *entire* stdout and stderr (buffered)
+    console.log(`stdout: ${stdout}`);
+    console.log(`nfcStatus: ${nfcStatus}`);
+    console.log(`stderr: ${stderr}`);
+
+    if (offset) {
+      callback(this.RESULT_ATTR_NOT_LONG, null);
+    }
+    else {
+      var data = new Buffer(2);
+      data.writeUInt16BE(nfcResponse, 0);
+      callback(this.RESULT_SUCCESS, data);
+    }
+  });
+
+
 };
-
 var LongDynamicReadOnlyCharacteristic = function() {
   LongDynamicReadOnlyCharacteristic.super_.call(this, {
-    uuid: 'ccc7',
+    uuid: 'FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFF4',
     properties: ['read']
   });
 };
@@ -63,6 +93,7 @@ LongDynamicReadOnlyCharacteristic.prototype.onReadRequest = function(offset, cal
 
   for (var i = 0; i < data.length; i++) {
     data[i] = i % 256;
+
   }
 
   if (offset > data.length) {
@@ -115,7 +146,10 @@ WriteOnlyCharacteristic.prototype.onWriteRequest = function(data, offset, withou
   //Execute pin control function
   GPIOcontrol(pin);
   console.log("Gpio control function finished executing.");
-	callback(this.RESULT_SUCCESS);
+
+
+
+  callback(this.RESULT_SUCCESS);
 };
 
 var NotifyOnlyCharacteristic = function() {
