@@ -1,19 +1,61 @@
 var util = require('util');
 
-var bleno = require('./index');
+var bleno = require('./node_modules/bleno/index');
 
-var gpio = require('../onoff').Gpio;
+var gpio = require('./node_modules/onoff').Gpio;
 
 const { exec } = require('child_process');
+
+const dropboxV2Api = require('dropbox-v2-api');
+
+const fs = require('fs');
+const path = require('path');
+
+var imageNum = 0;
+
+const credentials = JSON.parse(fs.readFileSync(path.join(__dirname, './credentials.json')));
+
+//set token authentication:
+const dropbox = dropboxV2Api.authenticate({
+  token: credentials.TOKEN
+});
+
+var cameraTrigger = function (imageNum) {
+  console.log("About to take picture...");
+  console.log("Image number is " + imageNum);
+  var command = "fswebcam -r 640x480 -S 15 image" + imageNum + ".jpg";
+  console.log("This is the command " + command);
+  var imageName = './image' + imageNum + '.jpg';
+  console.log("This is the name " + imageName);
+  var imagePath = '/images/image' + imageNum + '.jpg';
+  console.log("This is the path " + imagePath);
+  exec(command, (err, stdout, stderr) => {
+    if (err) {
+      // node couldn't execute the command
+      return;
+    }
+    else {
+      const dropboxUploadStream = dropbox({
+        resource: 'files/upload',
+        parameters: {
+          path: imagePath
+        }
+      }, (err, result) => {});
+
+      fs.createReadStream(imageName).pipe(dropboxUploadStream);
+    }
+  });
+};
 
 var BlenoPrimaryService = bleno.PrimaryService;
 var BlenoCharacteristic = bleno.Characteristic;
 var BlenoDescriptor = bleno.Descriptor;
+
 var nfcResponse;
 
 var nfcValues = [ "04  66  c8  b2  a6  4a  81", "c4  e4  53  12"];
 
-console.log('bleno');
+console.log('bleno...');
 
 var StaticReadOnlyCharacteristic = function() {
   StaticReadOnlyCharacteristic.super_.call(this, {
@@ -23,7 +65,7 @@ var StaticReadOnlyCharacteristic = function() {
     descriptors: [
       new BlenoDescriptor({
         uuid: '2901',
-        value: 'This is what i wrote'
+        value: 'staticRead'
       })
     ]
   });
@@ -57,6 +99,10 @@ DynamicReadOnlyCharacteristic.prototype.onReadRequest = function(offset, callbac
 
     if(nfcStatus == true) {
       nfcResponse = "1";
+      imageNum++;
+      console.log("About to run pic function");
+      cameraTrigger(imgNumber);
+      console.log("Finsihed running pic function");
     }
     else {
       nfcResponse = "0";
@@ -137,7 +183,6 @@ var GPIOcontrol = function (pin) {
   setTimeout(deactivateLock, 5000);
 };
 
-
 WriteOnlyCharacteristic.prototype.onWriteRequest = function(data, offset, withoutResponse, callback) {
   console.log('WriteOnlyCharacteristic write request in hex: ' + data.toString('hex') + ' ' + offset + ' ' + withoutResponse);
   //Convert data from hex to integer
@@ -146,8 +191,6 @@ WriteOnlyCharacteristic.prototype.onWriteRequest = function(data, offset, withou
   //Execute pin control function
   GPIOcontrol(pin);
   console.log("Gpio control function finished executing.");
-
-
 
   callback(this.RESULT_SUCCESS);
 };
