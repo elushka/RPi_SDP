@@ -89,30 +89,39 @@ DynamicReadOnlyCharacteristic.prototype.onReadRequest = function(offset, callbac
       // node couldn't execute the command
       return;
     }
-    while(stdout == null) {
-
-    }
+	console.log("This is stdout"+stdout);
 
     nfcResponse = stdout.trimRight();
 
+	console.log("While loop finished");
+    nfcResponse = stdout.trimRight();
+    var nfcErr = stderr.trimRight();
     var nfcStatus = (nfcValues.indexOf(nfcResponse) > -1);
 
-    if(nfcStatus == true) {
+	if (nfcErr == "nfc_initiator_poll_target: Success"){
+	  nfcResponse = "2";
+    }
+
+    else if(nfcStatus == true) {
       nfcResponse = "1";
       imageNum++;
       console.log("About to run pic function");
-      cameraTrigger(imgNumber);
+      cameraTrigger(imageNum);
       console.log("Finsihed running pic function");
     }
-    else {
+    else if(nfcStatus == false){
       nfcResponse = "0";
     }
     // the *entire* stdout and stderr (buffered)
-    console.log(`stdout: ${stdout}`);
-    console.log(`nfcStatus: ${nfcStatus}`);
-    console.log(`stderr: ${stderr}`);
+      console.log(`stdout: ${stdout}`);
+      //console.log(`nfc: ${rfc}`);
 
-    if (offset) {
+
+      console.log(`nfcStatus: ${nfcStatus}`);
+      console.log(`stderr: ${stderr}`);
+      console.log(`nfcResponse: ${nfcResponse}`);
+
+      if (offset) {
       callback(this.RESULT_ATTR_NOT_LONG, null);
     }
     else {
@@ -120,7 +129,7 @@ DynamicReadOnlyCharacteristic.prototype.onReadRequest = function(offset, callbac
       data.writeUInt16BE(nfcResponse, 0);
       callback(this.RESULT_SUCCESS, data);
     }
-  });
+    });
 
 
 };
@@ -165,22 +174,19 @@ util.inherits(WriteOnlyCharacteristic, BlenoCharacteristic);
 var GPIOcontrol = function (pin) {
   console.log("Started GPIO control function execution...");
   console.log("Selected pin number: " + pin);
-  var LOCK = new gpio(pin, 'out');
-  var delay = setInterval(activateLock, 5000);
+  var SOLENOID = new gpio(pin, 'out');
 
   function activateLock() {
-    if (LOCK.readSync() === 0) {
-      LOCK.writeSync(1);
-    }
+      SOLENOID.writeSync(1);
   }
 
   function deactivateLock() {
-    clearInterval(delay);
-    LOCK.writeSync(0);
-    LOCK.unexport();
+    SOLENOID.writeSync(0);
+    SOLENOID.unexport();
   }
 
   setTimeout(deactivateLock, 5000);
+  
 };
 
 WriteOnlyCharacteristic.prototype.onWriteRequest = function(data, offset, withoutResponse, callback) {
