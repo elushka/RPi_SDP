@@ -35,6 +35,11 @@ var cameraTrigger = function (imageNum) {
       return;
     }
     else {
+	exec("sudo pkill fswebcam", (err, stdout, stderr) => {
+    if (err) {
+      // node couldn't execute the command
+      return;
+    }});
       const dropboxUploadStream = dropbox({
         resource: 'files/upload',
         parameters: {
@@ -59,7 +64,7 @@ console.log('bleno...');
 
 var StaticReadOnlyCharacteristic = function() {
   StaticReadOnlyCharacteristic.super_.call(this, {
-    uuid: 'FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFF2',
+    uuid: 'FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFF1',
     properties: ['read'],
     value: new Buffer('value'),
     descriptors: [
@@ -74,7 +79,7 @@ util.inherits(StaticReadOnlyCharacteristic, BlenoCharacteristic);
 
 var DynamicReadOnlyCharacteristic = function() {
   DynamicReadOnlyCharacteristic.super_.call(this, {
-    uuid: 'FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFF3',
+    uuid: 'FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFF2',
     properties: ['read']
   });
 };
