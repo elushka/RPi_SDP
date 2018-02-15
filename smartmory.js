@@ -32,12 +32,14 @@ var cameraTrigger = function (imageNum) {
   console.log("This is the name " + imageName);
   imagePath = '/Smartmory-Images/image' + imageNum + '.jpg';
   console.log("This is the path " + imagePath);
-  exec(command, (err, stdout, stderr) => {
-    if (err) {
-      // node couldn't execute the command
-      return;
-    }
-    else if (fs.existsSync(imageName)){
+  while ( !fs.existsSync(imageName)){
+    exec(command, (err, stdout, stderr) => {
+      if (err) {
+        // node couldn't execute the command
+        return;
+      }
+  });}
+    if (fs.existsSync(imageName)){
       const dropboxUploadStream = dropbox({
         resource: 'files/upload',
         parameters: {
@@ -47,7 +49,6 @@ var cameraTrigger = function (imageNum) {
 
       fs.createReadStream(imageName).pipe(dropboxUploadStream);
     }
-  });
 };
 
 var BlenoPrimaryService = bleno.PrimaryService;
@@ -109,8 +110,10 @@ DynamicReadOnlyCharacteristic.prototype.onReadRequest = function(offset, callbac
       nfcResponse = "1";
       imageNum++;
       console.log("About to run pic function");
-      cameraTrigger(imageNum);
-      console.log("Finsihed running pic function");
+
+cameraTrigger(imageNum);
+
+      console.log("Finished running pic function");
     }
     else if(nfcStatus == false){
       nfcResponse = "0";
@@ -189,6 +192,7 @@ var GPIOcontrol = function (pin) {
   }
 
   setTimeout(deactivateLock, 5000);
+
 };
 
 WriteOnlyCharacteristic.prototype.onWriteRequest = function(data, offset, withoutResponse, callback) {
@@ -338,3 +342,4 @@ bleno.on('advertisingStop', function() {
 bleno.on('servicesSet', function(error) {
   console.log('on -> servicesSet: ' + (error ? 'error ' + error : 'success'));
 });
+
