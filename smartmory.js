@@ -109,10 +109,8 @@ DynamicReadOnlyCharacteristic.prototype.onReadRequest = function(offset, callbac
       nfcResponse = "1";
       imageNum++;
       console.log("About to run pic function");
-
-cameraTrigger(imageNum);
-
-      console.log("Finished running pic function");
+      cameraTrigger(imageNum);
+      console.log("Finsihed running pic function");
     }
     else if(nfcStatus == false){
       nfcResponse = "0";
@@ -191,7 +189,6 @@ var GPIOcontrol = function (pin) {
   }
 
   setTimeout(deactivateLock, 5000);
-
 };
 
 WriteOnlyCharacteristic.prototype.onWriteRequest = function(data, offset, withoutResponse, callback) {
