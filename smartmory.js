@@ -12,6 +12,9 @@ const fs = require('fs');
 const path = require('path');
 
 var imageNum = 0;
+var imageName;
+var imagePath;
+var folderPath;
 
 const credentials = JSON.parse(fs.readFileSync(path.join(__dirname, './credentials.json')));
 
@@ -25,16 +28,16 @@ var cameraTrigger = function (imageNum) {
   console.log("Image number is " + imageNum);
   var command = "fswebcam -r 640x480 -S 15 image" + imageNum + ".jpg";
   console.log("This is the command " + command);
-  var imageName = './image' + imageNum + '.jpg';
+  imageName = './image' + imageNum + '.jpg';
   console.log("This is the name " + imageName);
-  var imagePath = '/images/image' + imageNum + '.jpg';
+  imagePath = '/Smartmory-Images/image' + imageNum + '.jpg';
   console.log("This is the path " + imagePath);
   exec(command, (err, stdout, stderr) => {
     if (err) {
       // node couldn't execute the command
       return;
     }
-    else {
+    else if (fs.existsSync(imageName)){
       const dropboxUploadStream = dropbox({
         resource: 'files/upload',
         parameters: {
@@ -59,7 +62,7 @@ console.log('bleno...');
 
 var StaticReadOnlyCharacteristic = function() {
   StaticReadOnlyCharacteristic.super_.call(this, {
-    uuid: 'FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFF2',
+    uuid: 'FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFF1',
     properties: ['read'],
     value: new Buffer('value'),
     descriptors: [
@@ -74,7 +77,7 @@ util.inherits(StaticReadOnlyCharacteristic, BlenoCharacteristic);
 
 var DynamicReadOnlyCharacteristic = function() {
   DynamicReadOnlyCharacteristic.super_.call(this, {
-    uuid: 'FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFF3',
+    uuid: 'FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFF2',
     properties: ['read']
   });
 };
@@ -89,30 +92,41 @@ DynamicReadOnlyCharacteristic.prototype.onReadRequest = function(offset, callbac
       // node couldn't execute the command
       return;
     }
-    while(stdout == null) {
-
-    }
+	console.log("This is stdout"+stdout);
 
     nfcResponse = stdout.trimRight();
 
+	console.log("While loop finished");
+    nfcResponse = stdout.trimRight();
+    var nfcErr = stderr.trimRight();
     var nfcStatus = (nfcValues.indexOf(nfcResponse) > -1);
 
-    if(nfcStatus == true) {
+	if (nfcErr == "nfc_initiator_poll_target: Success"){
+	  nfcResponse = "2";
+    }
+
+    else if(nfcStatus == true) {
       nfcResponse = "1";
       imageNum++;
       console.log("About to run pic function");
-      cameraTrigger(imgNumber);
-      console.log("Finsihed running pic function");
+
+cameraTrigger(imageNum);
+
+      console.log("Finished running pic function");
     }
-    else {
+    else if(nfcStatus == false){
       nfcResponse = "0";
     }
     // the *entire* stdout and stderr (buffered)
-    console.log(`stdout: ${stdout}`);
-    console.log(`nfcStatus: ${nfcStatus}`);
-    console.log(`stderr: ${stderr}`);
+      console.log(`stdout: ${stdout}`);
+      //console.log(`nfc: ${rfc}`);
 
-    if (offset) {
+
+      console.log(`nfcStatus: ${nfcStatus}`);
+      console.log(`stderr: ${stderr}`);
+      console.log(`nfcResponse: ${nfcResponse}`);
+
+      if (offset) {
       callback(this.RESULT_ATTR_NOT_LONG, null);
     }
     else {
@@ -120,7 +134,7 @@ DynamicReadOnlyCharacteristic.prototype.onReadRequest = function(offset, callbac
       data.writeUInt16BE(nfcResponse, 0);
       callback(this.RESULT_SUCCESS, data);
     }
-  });
+    });
 
 
 };
@@ -165,22 +179,19 @@ util.inherits(WriteOnlyCharacteristic, BlenoCharacteristic);
 var GPIOcontrol = function (pin) {
   console.log("Started GPIO control function execution...");
   console.log("Selected pin number: " + pin);
-  var LOCK = new gpio(pin, 'out');
-  var delay = setInterval(activateLock, 5000);
+  var SOLENOID = new gpio(pin, 'out');
 
   function activateLock() {
-    if (LOCK.readSync() === 0) {
-      LOCK.writeSync(1);
-    }
+      SOLENOID.writeSync(1);
   }
 
   function deactivateLock() {
-    clearInterval(delay);
-    LOCK.writeSync(0);
-    LOCK.unexport();
+    SOLENOID.writeSync(0);
+    SOLENOID.unexport();
   }
 
   setTimeout(deactivateLock, 5000);
+
 };
 
 WriteOnlyCharacteristic.prototype.onWriteRequest = function(data, offset, withoutResponse, callback) {
