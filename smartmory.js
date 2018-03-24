@@ -8,6 +8,9 @@ const { exec } = require('child_process');
 
 const dropboxV2Api = require('dropbox-v2-api');
 
+const raspi = require('./node_modules/raspi');
+const GPIO = require('./node_modules/raspi-gpio');
+
 const fs = require('fs');
 const path = require('path');
 
@@ -15,6 +18,8 @@ var imageNum = 0;
 var imageName;
 var imagePath;
 var folderPath;
+var GPIOpin;
+var doorStatus;
 
 const credentials = JSON.parse(fs.readFileSync(path.join(__dirname, './credentials.json')));
 
@@ -22,6 +27,23 @@ const credentials = JSON.parse(fs.readFileSync(path.join(__dirname, './credentia
 const dropbox = dropboxV2Api.authenticate({
   token: credentials.TOKEN
 });
+
+var checkDoor = function(GPIOpin) {
+	raspi.init(() => {
+  const input = new GPIO.DigitalInput({
+    pin: GPIOpin,
+    pullResistor: GPIO.PULL_UP
+  });
+
+  const output = new GPIO.DigitalOutput('GPIO17');
+
+  output.write(input.read());
+
+  doorStatus = input.read();
+  console.log("This is function: "+input.read());
+console.log("This is the doorStatus: " + doorStatus);
+});
+};
 
 var cameraTrigger = function (imageNum) {
   console.log("About to take picture...");
@@ -85,7 +107,6 @@ var DynamicReadOnlyCharacteristic = function() {
 
 util.inherits(DynamicReadOnlyCharacteristic, BlenoCharacteristic);
 
-
 DynamicReadOnlyCharacteristic.prototype.onReadRequest = function(offset, callback) {
   console.log("About to exec...");
   exec("nfc-poll | grep UID | sed 's/^.*: //'", (err, stdout, stderr) => {
@@ -140,8 +161,8 @@ cameraTrigger(imageNum);
 
 };
 var LongDynamicReadOnlyCharacteristic = function() {
-  LongDynamicReadOnlyCharacteristic.super_.call(this, {
-    uuid: 'FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFF4',
+  DynamicReadOnlyCharacteristic.super_.call(this, {
+    uuid: 'FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFF3',
     properties: ['read']
   });
 };
@@ -149,22 +170,15 @@ var LongDynamicReadOnlyCharacteristic = function() {
 util.inherits(LongDynamicReadOnlyCharacteristic, BlenoCharacteristic);
 
 LongDynamicReadOnlyCharacteristic.prototype.onReadRequest = function(offset, callback) {
-  var result = this.RESULT_SUCCESS;
-  var data = new Buffer(512);
-
-  for (var i = 0; i < data.length; i++) {
-    data[i] = i % 256;
-
-  }
-
-  if (offset > data.length) {
-    result = this.RESULT_INVALID_OFFSET;
-    data = null;
-  } else {
-    data = data.slice(offset);
-  }
-
-  callback(result, data);
+  checkDoor('GPIO4');
+  if (offset) {
+  callback(this.RESULT_ATTR_NOT_LONG, null);
+}
+else {
+  var data = new Buffer(2);
+  data.writeUInt16BE(doorStatus, 0);
+  callback(this.RESULT_SUCCESS, data);
+}
 };
 
 var WriteOnlyCharacteristic = function() {
