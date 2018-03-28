@@ -20,6 +20,7 @@ var imagePath;
 var folderPath;
 var GPIOpin;
 var doorStatus;
+var usbNumber;
 
 const credentials = JSON.parse(fs.readFileSync(path.join(__dirname, './credentials.json')));
 
@@ -27,7 +28,7 @@ const credentials = JSON.parse(fs.readFileSync(path.join(__dirname, './credentia
 const dropbox = dropboxV2Api.authenticate({
   token: credentials.TOKEN
 });
-
+//13 and 21
 var checkDoor = function(GPIOpin) {
 	raspi.init(() => {
   const input = new GPIO.DigitalInput({
@@ -42,13 +43,58 @@ var checkDoor = function(GPIOpin) {
   doorStatus = input.read();
   console.log("This is function: "+input.read());
 console.log("This is the doorStatus: " + doorStatus);
+
+if(doorStatus == 1) {
+  var command = "nfc-poll pn532_uart:/dev/ttyUSB" + usbNumber + " | grep UID | sed 's/^.*: //'";
+
+  exec(command, (err, stdout, stderr) => {
+  if (err) {
+    // node couldn't execute the command
+    return;
+  }
+  console.log("This is stdout"+stdout);
+
+  nfcResponse = stdout.trimRight();
+
+  console.log("While loop finished");
+  nfcResponse = stdout.trimRight();
+  var nfcErr = stderr.trimRight();
+  var nfcStatus = (nfcValues.indexOf(nfcResponse) > -1);
+
+  if (nfcErr == "nfc_initiator_poll_target: Success"){
+  nfcResponse = "2";
+  }
+
+  else if(nfcStatus == true) {
+    nfcResponse = "1";
+    imageNum++;
+    console.log("About to run pic function");
+
+  cameraTrigger(imageNum);
+
+    console.log("Finished running pic function");
+  }
+  else if(nfcStatus == false){
+    nfcResponse = "0";
+  }
+  // the *entire* stdout and stderr (buffered)
+    console.log(`stdout: ${stdout}`);
+    //console.log(`nfc: ${rfc}`);
+
+
+    console.log(`nfcStatus: ${nfcStatus}`);
+    console.log(`stderr: ${stderr}`);
+    console.log(`nfcResponse: ${nfcResponse}`);
+
+  });
+}
 });
 };
 
-var cameraTrigger = function (imageNum) {
+var cameraTrigger = function (imageNum, usbNumber) {
   console.log("About to take picture...");
   console.log("Image number is " + imageNum);
-  var command = "fswebcam -r 640x480 -S 15 image" + imageNum + ".jpg";
+  var command = "fswebcam -r -d /dev/video" + usbNumber + " 640x480 -S 15 image" + imageNum + ".jpg";
   console.log("This is the command " + command);
   imageName = './image' + imageNum + '.jpg';
   console.log("This is the name " + imageName);
@@ -81,6 +127,13 @@ var nfcResponse;
 
 var nfcValues = [ "04  66  c8  b2  a6  4a  81", "c4  e4  53  12"];
 
+var inventory = {
+  compartments: {
+    0: "",
+    1: ""
+  }
+}
+
 console.log('bleno...');
 
 var StaticReadOnlyCharacteristic = function() {
@@ -109,7 +162,31 @@ util.inherits(DynamicReadOnlyCharacteristic, BlenoCharacteristic);
 
 DynamicReadOnlyCharacteristic.prototype.onReadRequest = function(offset, callback) {
   console.log("About to exec...");
-  exec("nfc-poll | grep UID | sed 's/^.*: //'", (err, stdout, stderr) => {
+
+  if (offset) {
+  callback(this.RESULT_ATTR_NOT_LONG, null);
+}
+else {
+  var data = new Buffer(2);
+  data.writeUInt16BE(nfcResponse, 0);
+  callback(this.RESULT_SUCCESS, data);
+}
+
+};
+var LongDynamicReadOnlyCharacteristic = function() {
+  DynamicReadOnlyCharacteristic.super_.call(this, {
+    uuid: 'FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFF3',
+    properties: ['read']
+  });
+};
+
+util.inherits(LongDynamicReadOnlyCharacteristic, BlenoCharacteristic);
+
+LongDynamicReadOnlyCharacteristic.prototype.onReadRequest = function(offset, callback) {
+  //checkDoor('GPIO4');
+  for(var i = 0; i < 2; i++) {
+    var command = "nfc-poll pn532_uart:/dev/ttyUSB" + i + " | grep UID | sed 's/^.*: //'";
+  exec(command, (err, stdout, stderr) => {
     if (err) {
       // node couldn't execute the command
       return;
@@ -129,16 +206,12 @@ DynamicReadOnlyCharacteristic.prototype.onReadRequest = function(offset, callbac
 
     else if(nfcStatus == true) {
       nfcResponse = "1";
-      imageNum++;
-      console.log("About to run pic function");
-
-cameraTrigger(imageNum);
-
-      console.log("Finished running pic function");
     }
     else if(nfcStatus == false){
       nfcResponse = "0";
     }
+
+    inventory["compartments"][i] = nfcResponse;
     // the *entire* stdout and stderr (buffered)
       console.log(`stdout: ${stdout}`);
       //console.log(`nfc: ${rfc}`);
@@ -147,7 +220,7 @@ cameraTrigger(imageNum);
       console.log(`nfcStatus: ${nfcStatus}`);
       console.log(`stderr: ${stderr}`);
       console.log(`nfcResponse: ${nfcResponse}`);
-
+    }
       if (offset) {
       callback(this.RESULT_ATTR_NOT_LONG, null);
     }
@@ -156,21 +229,8 @@ cameraTrigger(imageNum);
       data.writeUInt16BE(nfcResponse, 0);
       callback(this.RESULT_SUCCESS, data);
     }
-    });
 
-
-};
-var LongDynamicReadOnlyCharacteristic = function() {
-  DynamicReadOnlyCharacteristic.super_.call(this, {
-    uuid: 'FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFF3',
-    properties: ['read']
-  });
-};
-
-util.inherits(LongDynamicReadOnlyCharacteristic, BlenoCharacteristic);
-
-LongDynamicReadOnlyCharacteristic.prototype.onReadRequest = function(offset, callback) {
-  checkDoor('GPIO4');
+});
   if (offset) {
   callback(this.RESULT_ATTR_NOT_LONG, null);
 }
