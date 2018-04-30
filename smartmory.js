@@ -59,20 +59,20 @@ try {
     nfcResponse = c;
     nfcErr = e;
     nfcStatus = (nfcValues.indexOf(nfcResponse) > -1);
-    
+
   if(nfcStatus == false) {
       inventory["compartments"][i] = "0";
     }
   else if(nfcStatus == true) {
       inventory["compartments"][i] = c;
-    } 
+    }
 }
 
 
-var cameraTrigger = function (imageNum) {
+var cameraTrigger = function (imageNum, lastDoor) {
   console.log("About to take picture...");
   console.log("Image number is " + imageNum);
-  var command = "fswebcam -r 640x480 -S 15 image" + imageNum + ".jpg";
+  var command = "fswebcam -r 640x480" + " -d /dev/video" + lastDoor + " -S 15 image" + imageNum + ".jpg";
   console.log("This is the command " + command);
   imageName = './image' + imageNum + '.jpg';
   console.log("This is the name " + imageName);
@@ -173,7 +173,7 @@ if(doorStatus == 0) {
 
         if (nfcValues.indexOf(inventory["compartments"][lastDoor]) > -1) {
               fs.readFile('photoNum.txt', (err, imageNum) => {if (err) throw err;
-console.log(imageNum);cameraTrigger(imageNum);imageNum++;
+console.log(imageNum);cameraTrigger(imageNum, lastDoor);imageNum++;
 fs.writeFile('photoNum.txt', imageNum, function (err){ if (err) throw err});
 });
             returnCompleted = 1;
@@ -219,7 +219,7 @@ if(doorStatus == 0) {
 
         if (nfcValues.indexOf(inventory["compartments"][lastDoor]) > -1) {
               fs.readFile('photoNum.txt', (err, imageNum) => {if (err) throw err;
-console.log(imageNum);cameraTrigger(imageNum);imageNum++;
+console.log(imageNum);cameraTrigger(imageNum, lastDoor);imageNum++;
 fs.writeFile('photoNum.txt', imageNum, function (err){ if (err) throw err});
 });
             returnCompleted = 2;
@@ -241,7 +241,7 @@ fs.writeFile('photoNum.txt', imageNum, function (err){ if (err) throw err});
     else {
 console.log("This is else");
       var data = new Buffer(2);
-	
+
       data.writeUInt16BE(returnCompleted, 0);
       callback(this.RESULT_SUCCESS, data);
     }
@@ -265,7 +265,7 @@ LongDynamicReadOnlyCharacteristic.prototype.onReadRequest = function(offset, cal
   if (inventory["compartments"][k] == 0) {
     open = k;
     console.log(open);
-    break;  
+    break;
   }
 }
 
@@ -294,7 +294,7 @@ VeryLongDynamicReadOnlyCharacteristic.prototype.onReadRequest = function(offset,
   for (var k = 0; k < 2; k++) {
   checkCompartments(k);
   console.log("This is "+k+": "+inventory["compartments"][k]);
-	tags += inventory["compartments"][k] 
+	tags += inventory["compartments"][k]
 	}
 console.log(tags);
     if (offset) {
